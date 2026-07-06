@@ -438,6 +438,9 @@ const OFFER_DEFAULTS = {
 function esc(s){
   return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
+function nl2br(s){
+  return esc(s).split('\n\n').map(p=>'<p>'+p.replace(/\n/g,'<br>')+'</p>').join('');
+}
 function setCounter(id,len,max){
   const el = document.getElementById('cnt-'+id);
   if(!el) return;
@@ -446,9 +449,24 @@ function setCounter(id,len,max){
 }
 
 /* ================= INIT ================= */
+let LOGO_DATA = 'logo-immoshops.png';
+function preloadLogo(){
+  fetch('logo-immoshops.png')
+    .then(r=>r.blob())
+    .then(blob=>new Promise((res,rej)=>{
+      const fr = new FileReader();
+      fr.onload = ()=>res(fr.result);
+      fr.onerror = rej;
+      fr.readAsDataURL(blob);
+    }))
+    .then(dataUrl=>{ LOGO_DATA = dataUrl; renderPreview(); })
+    .catch(()=>{ /* garde le chemin par défaut si le fetch échoue */ });
+}
+
 window.addEventListener('DOMContentLoaded', ()=>{
   if(window.innerWidth>=900) document.body.classList.add('desktop-mode');
   loadDemo();
+  preloadLogo();
   populateTemplateSelects();
   window.addEventListener('resize', fitScale);
 });
@@ -649,7 +667,7 @@ function renderEquipForm(){
 }
 function updateEquip(i,key,val){ state.equip[i][key]=val; renderPreview(); }
 function addEquip(){
-  if(state.equip.length>=4){ alert("Maximum 4 tableaux d'équipements."); return; }
+  if(state.equip.length>=4){ alert('Maximum 4 tableaux d\'équipements.'); return; }
   state.equip.push({title:'',desc:''});
   renderEquipForm(); renderPreview();
 }
@@ -800,7 +818,7 @@ function renderPreview(){
 
   document.getElementById('page').innerHTML = `
     <div class="p-header">
-      <img class="p-logo-img" src="logo-immoshops.png" alt="IMMO SHOPS">
+      <img class="p-logo-img" src="${LOGO_DATA}" alt="IMMO SHOPS">
     </div>
 
     <div class="p-band">
@@ -868,11 +886,19 @@ async function generatePDF(){
   try{
     if(document.fonts && document.fonts.ready){ await document.fonts.ready; }
     const page = document.getElementById('page');
+    const imgs = Array.from(page.querySelectorAll('img'));
+    await Promise.all(imgs.map(img=>{
+      if(img.complete && img.naturalWidth>0) return Promise.resolve();
+      return new Promise(res=>{ img.onload=res; img.onerror=res; });
+    }));
     const prevTransform = document.getElementById('scaler').style.transform;
     document.getElementById('scaler').style.transform = 'none';
     const canvas = await html2canvas(page, {scale:4, useCORS:true, allowTaint:true, backgroundColor:'#ffffff'});
     document.getElementById('scaler').style.transform = prevTransform;
     fitScale();
+    if(!canvas.width || !canvas.height){
+      throw new Error('Le rendu est vide, réessaie dans un instant.');
+    }
     const imgData = canvas.toDataURL('image/jpeg', 0.97);
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({unit:'mm', format:'a4', orientation:'portrait'});
