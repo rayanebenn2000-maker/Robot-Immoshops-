@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Générateur de fiche produit — IMMOSHOPS</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --red:#C41230;
+    --red-dark:#a30e28;
+    --red-pale:#FBE9EB;
+    --red-pale2:#f6d9dd;
+    --gray:#6b7280;
+    --border:#e2e2e2;
+    --ink:#1c1c1c;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:#eef0f3;color:var(--ink);font-family:Arial,Helvetica,sans-serif;}
+  h1,h2,h3{font-family:'Poppins',Arial,sans-serif;}
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+  body{font-family:'Inter',Arial,sans-serif;}
+
+  #topbar{
+    position:sticky;top:0;z-index:50;
+    display:flex;gap:6px;padding:8px 10px;
+    background:#fff;border-bottom:1px solid var(--border);
+    box-shadow:0 1px 4px rgba(0,0,0,.06);
+  }
+  .tab{
+    flex:1;padding:9px 6px;border:1px solid var(--border);background:#f7f7f8;
+    border-radius:8px;font-size:13px;font-weight:600;color:#444;cursor:pointer;
+  }
+  .tab.active{background:var(--red);color:#fff;border-color:var(--red);}
+  #btn-pdf{
+    flex:1.2;padding:9px 6px;border:none;background:var(--ink);color:#fff;
+    border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;
+  }
+  #btn-pdf:disabled{opacity:.55;}
+
+  #edit-panel{padding:12px 12px 90px;max-width:520px;margin:0 auto;}
+  #preview-wrap{padding:14px 0 90px;display:flex;justify-content:center;}
+  .hidden{display:none !important;}
+
+  .section{
+    background:#fff;border:1px solid var(--border);border-radius:10px;
+    margin-bottom:12px;overflow:hidden;
+  }
+  .section > summary{
+    list-style:none;cursor:pointer;padding:12px 14px;font-weight:700;font-size:13.5px;
+    display:flex;justify-content:space-between;align-items:center;
+    background:#fafafa;border-bottom:1px solid var(--border);
+  }
+  .section > summary::-webkit-details-marker{display:none;}
+  .section > summary:after{content:'+';font-size:18px;color:var(--gray);}
+  .section[open] > summary:after{content:'–';}
+  .section-body{padding:12px 14px 14px;}
+
+  label.field{display:block;font-size:12px;font-weight:600;color:#444;margin:10px 0 4px;}
+  label.field:first-child{margin-top:0;}
+  input[type=text], textarea, select{
+    width:100%;padding:9px 10px;border:1px solid #d5d5d8;border-radius:7px;
+    font-size:14px;font-family:inherit;background:#fff;color:var(--ink);
+  }
+  textarea{resize:vertical;min-height:64px;line-height:1.35;}
+  .counter{font-size:11px;color:var(--gray);text-align:right;margin-top:2px;}
+  .counter.warn{color:#c05a00;}
+  .counter.over{color:var(--red);font-weight:700;}
+  .row2{display:flex;gap:8px;}
+  .row2 > *{flex:1;}
+  .hint{font-size:11.5px;color:var(--gray);margin-top:4px;line-height:1.4;}
+  .btn{
+    padding:8px 12px;border-radius:7px;border:1px solid #d5d5d8;background:#f5f5f6;
+    font-size:12.5px;font-weight:600;cursor:pointer;color:#333;
+  }
+  .btn.primary{background:var(--red);border-color:var(--red);color:#fff;}
+  .btn.ghost{background:transparent;}
+  .btn.small{padding:5px 9px;font-size:11.5px;}
+  .btn.danger{color:var(--red);}
+  .btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+
+  .card{border:1px solid var(--border);border-radius:8px;padding:10px;margin-top:8px;background:#fcfcfc;position:relative;}
+  .card .rm{position:absolute;top:6px;right:6px;}
+
+  .toolbar{display:flex;gap:6px;margin-bottom:6px;}
+  .toolbar button{
+    width:32px;height:30px;border-radius:6px;border:1px solid #d5d5d8;background:#fff;cursor:pointer;font-size:13px;
+  }
+  .toolbar button.b{font-weight:800;}
+  .toolbar button.r{color:var(--red);font-weight:800;}
+  [contenteditable]{
+    border:1px solid #d5d5d8;border-radius:7px;padding:9px 10px;min-height:56px;font-size:14px;line-height:1.4;background:#fff;
+  }
+  [contenteditable]:focus{outline:2px solid #cfe0ff;}
+
+  .photobox{display:flex;gap:10px;}
+  .photobox .slot{flex:1;text-align:center;}
+  .photobox img{width:100%;height:80px;object-fit:cover;border-radius:6px;border:1px solid var(--border);}
+  .filebtn{display:block;font-size:11px;margin-top:5px;}
+
+  select.tmpl{margin-top:6px;}
+
+  /* ---------- A4 PAGE ---------- */
+  #scaler{transform-origin:top left;}
+  #page{
+    width:794px;min-height:1123px;background:#fff;color:var(--ink);
+    padding:26px 30px 20px;position:relative;
+    border:1px solid #ccc;
+    font-family:'Inter',Arial,sans-serif;
+  }
+  #page .p-header{text-align:center;margin-bottom:14px;}
+  #page .p-logo{font-family:'Poppins',Arial,sans-serif;font-weight:800;font-size:30px;letter-spacing:2px;color:var(--red);margin:0;}
+  #page .p-tagline{font-size:9.5px;letter-spacing:.4px;color:#555;margin-top:2px;font-weight:600;}
+
+  #page .p-band{background:var(--red);color:#fff;border-radius:6px;padding:12px 16px;text-align:center;margin-bottom:14px;}
+  #page .p-eyebrow{font-size:11px;letter-spacing:1.5px;font-weight:700;opacity:.92;}
+  #page .p-title{font-family:'Poppins',Arial,sans-serif;font-size:25px;font-weight:800;margin:3px 0 2px;}
+  #page .p-subtitle{font-size:13px;font-weight:500;opacity:.95;}
+
+  #page .p-accroche{
+    border:1px solid var(--red-pale2);background:var(--red-pale);border-radius:6px;
+    padding:10px 14px;font-size:12.5px;line-height:1.45;margin-bottom:14px;
+  }
+  #page .p-accroche b{color:var(--red);}
+  #page .p-accroche .red{color:var(--red);font-weight:700;}
+
+  #page .p-photos{display:flex;gap:14px;margin-bottom:8px;}
+  #page .p-photos .slot{flex:1;text-align:center;}
+  #page .p-photos img{width:100%;height:170px;object-fit:cover;border-radius:4px;display:block;}
+  #page .p-photos .cap{font-size:10.5px;font-weight:800;letter-spacing:1px;color:var(--red);margin-top:5px;}
+
+  #page .p-h2{
+    font-size:13px;font-weight:800;letter-spacing:.4px;color:var(--red);
+    margin:16px 0 8px;padding-bottom:4px;border-bottom:2px solid var(--red);
+  }
+
+  #page .p-chiffres{display:grid;gap:10px;margin-bottom:4px;}
+  #page .p-chiffres .box{
+    border:1px solid var(--red-pale2);background:var(--red-pale);border-radius:6px;
+    text-align:center;padding:12px 6px;
+  }
+  #page .p-chiffres .val{font-size:20px;font-weight:800;color:var(--red);font-family:'Poppins',Arial,sans-serif;}
+  #page .p-chiffres .lbl{font-size:9.5px;color:#555;letter-spacing:.5px;font-weight:700;margin-top:2px;}
+
+  #page .p-fin{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:4px;}
+  #page .p-fin td{padding:7px 10px;border-bottom:1px solid var(--border);}
+  #page .p-fin td:first-child{background:#f5f5f6;font-weight:700;width:38%;}
+  #page .p-fin td:last-child{font-weight:600;}
+
+  #page .p-desc{font-size:12px;line-height:1.55;text-align:justify;}
+  #page .p-desc p{margin:0 0 8px;}
+  #page .p-desc b{font-weight:700;}
+
+  #page .p-equip{display:grid;width:100%;border:1px solid var(--red-pale2);border-radius:4px;overflow:hidden;}
+  #page .p-equip .h{background:var(--red);color:#fff;font-size:11px;font-weight:700;text-align:center;padding:6px 4px;}
+  #page .p-equip .d{background:var(--red-pale);font-size:10.5px;text-align:center;padding:8px 6px;line-height:1.35;border-top:1px solid var(--red-pale2);}
+  #page .p-equip .h:not(:last-child), #page .p-equip .d:not(:last-child){border-right:1px solid var(--red-pale2);}
+
+  #page .p-loc{border:1px solid var(--border);border-radius:4px;overflow:hidden;}
+  #page .p-loc .head{background:var(--red-pale);color:var(--red);font-weight:800;font-size:12px;padding:7px 10px;letter-spacing:.4px;}
+  #page .p-loc ul{margin:0;padding:8px 10px 8px 22px;font-size:11.5px;line-height:1.6;}
+  #page .p-loc li::marker{color:var(--red);}
+
+  #page .p-footer{
+    margin-top:16px;border-top:2px solid var(--red);padding-top:8px;text-align:center;
+  }
+  #page .p-footer .l1{font-size:11px;font-weight:700;}
+  #page .p-footer .l2{font-size:8.5px;color:#777;margin-top:3px;}
+
+  @media (min-width:900px){
+    body.desktop-mode #topbar{max-width:1200px;margin:0 auto;}
+    body.desktop-mode #main{display:flex;max-width:1200px;margin:0 auto;gap:16px;align-items:flex-start;}
+    body.desktop-mode #edit-panel{margin:0;flex:0 0 420px;max-height:calc(100vh - 60px);overflow:auto;}
+    body.desktop-mode #preview-wrap{flex:1;margin:14px 0;}
+    body.desktop-mode #preview-wrap.hidden{display:flex !important;}
+    body.desktop-mode .tab{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <button id="tab-edit" class="tab active" onclick="showTab('edit')">Édition</button>
+  <button id="tab-preview" class="tab" onclick="showTab('preview')">Aperçu</button>
+  <button id="btn-pdf" onclick="generatePDF()">Télécharger PDF HD</button>
+</div>
+
+<div id="main">
+<div id="edit-panel">
+
+  <details class="section" open>
+    <summary>Type d'offre</summary>
+    <div class="section-body">
+      <label class="field">Nature de la transaction</label>
+      <select id="offerType" onchange="onOfferTypeChange()">
+        <option value="location">Location</option>
+        <option value="cession">Cession de bail / fonds</option>
+        <option value="vente">Vente de murs</option>
+      </select>
+      <div class="btnrow">
+        <button class="btn small" onclick="applyOfferDefaults()">Adapter les libellés financiers au type choisi</button>
+      </div>
+      <div class="hint">Change l'intitulé du bandeau et la section descriptif. Le tableau financier n'est pas modifié automatiquement — utilise le bouton si tu veux repartir des libellés standards du type sélectionné.</div>
+    </div>
+  </details>
+
+  <details class="section" open>
+    <summary>Titre du bien</summary>
+    <div class="section-body">
+      <label class="field">Titre principal</label>
+      <input type="text" id="titre" maxlength="55" oninput="onText('titre',this.value,55)">
+      <div class="counter" id="cnt-titre">0/55</div>
+
+      <label class="field">Sous-titre (localisation courte)</label>
+      <input type="text" id="sousTitre" maxlength="70" oninput="onText('sousTitre',this.value,70)">
+      <div class="counter" id="cnt-sousTitre">0/70</div>
+    </div>
+  </details>
+
+  <details class="section" open>
+    <summary>Accroche (bandeau rouge clair)</summary>
+    <div class="section-body">
+      <div class="toolbar">
+        <button class="b" title="Gras" onmousedown="event.preventDefault()" onclick="fmt('bold')">G</button>
+        <button class="r" title="Rouge" onmousedown="event.preventDefault()" onclick="fmt('red')">R</button>
+        <button title="Effacer la mise en forme" onmousedown="event.preventDefault()" onclick="fmt('clear')">✕</button>
+      </div>
+      <div id="accroche-edit" contenteditable="true" oninput="onAccroche()"></div>
+      <div class="counter" id="cnt-accroche">0/260</div>
+      <div class="hint">Sélectionne une portion de texte puis clique sur G (gras) ou R (rouge) pour la mettre en valeur, comme "Opportunité rare" dans le modèle.</div>
+    </div>
+  </details>
+
+  <details class="section" open>
+    <summary>Photos</summary>
+    <div class="section-body">
+      <div class="photobox">
+        <div class="slot">
+          <img id="prev-photo1" src="">
+          <input type="file" accept="image/*" class="filebtn" onchange="onPhoto(0,this)">
+          <label class="field">Légende</label>
+          <input type="text" id="cap1" maxlength="20" oninput="onText('cap1',this.value,20)">
+        </div>
+        <div class="slot">
+          <img id="prev-photo2" src="">
+          <input type="file" accept="image/*" class="filebtn" onchange="onPhoto(1,this)">
+          <label class="field">Légende</label>
+          <input type="text" id="cap2" maxlength="20" oninput="onText('cap2',this.value,20)">
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <details class="section">
+    <summary>Chiffres clés (2 à 3 cases)</summary>
+    <div class="section-body">
+      <div id="chiffres-list"></div>
+      <div class="btnrow">
+        <button class="btn small" onclick="addChiffre()">+ Ajouter une case</button>
+      </div>
+    </div>
+  </details>
+
+  <details class="section">
+    <summary>Conditions financières</summary>
+    <div class="section-body">
+      <div id="fin-list"></div>
+      <div class="btnrow">
+        <button class="btn small" onclick="addFinRow()">+ Ajouter une ligne</button>
+      </div>
+    </div>
+  </details>
+
+  <details class="section">
+    <summary>Descriptif</summary>
+    <div class="section-body">
+      <label class="field">Titre de section (auto selon le type d'offre, modifiable)</label>
+      <input type="text" id="descLabel" maxlength="35" oninput="onText('descLabel',this.value,35)">
+
+      <label class="field">Texte descriptif</label>
+      <textarea id="descriptif" maxlength="750" rows="6" oninput="onText('descriptif',this.value,750)"></textarea>
+      <div class="counter" id="cnt-descriptif">0/750</div>
+
+      <label class="field">Modèles enregistrés (stockage local à ce navigateur)</label>
+      <select class="tmpl" id="descTmplSelect"></select>
+      <div class="btnrow">
+        <button class="btn small" onclick="loadDescTemplate()">Charger</button>
+        <button class="btn small" onclick="saveDescTemplate()">Enregistrer comme modèle</button>
+        <button class="btn small danger" onclick="deleteDescTemplate()">Supprimer ce modèle</button>
+      </div>
+    </div>
+  </details>
+
+  <details class="section">
+    <summary>Équipements techniques (1 à 4 tableaux)</summary>
+    <div class="section-body">
+      <div id="equip-list"></div>
+      <div class="btnrow">
+        <button class="btn small" onclick="addEquip()">+ Ajouter un tableau</button>
+      </div>
+      <label class="field" style="margin-top:14px;">Modèles enregistrés (jeu complet d'équipements)</label>
+      <select class="tmpl" id="equipTmplSelect"></select>
+      <div class="btnrow">
+        <button class="btn small" onclick="loadEquipTemplate()">Charger</button>
+        <button class="btn small" onclick="saveEquipTemplate()">Enregistrer comme modèle</button>
+        <button class="btn small danger" onclick="deleteEquipTemplate()">Supprimer ce modèle</button>
+      </div>
+    </div>
+  </details>
+
+  <details class="section">
+    <summary>Localisation & accessibilité</summary>
+    <div class="section-body">
+      <label class="field">Titre (ville — département)</label>
+      <input type="text" id="locTitre" maxlength="40" oninput="onText('locTitre',this.value,40)">
+
+      <div id="loc-list"></div>
+      <div class="btnrow">
+        <button class="btn small" onclick="addLocBullet()">+ Ajouter une ligne</button>
+      </div>
+    </div>
+  </details>
+
+  <details class="section">
+    <summary>Pied de page</summary>
+    <div class="section-body">
+      <div class="hint">Coordonnées de l'agence, mentions RCS et carte professionnelle : fixes, non modifiables depuis cette application (identité de l'agence).</div>
+    </div>
+  </details>
+
+  <div class="btnrow" style="margin-top:4px;">
+    <button class="btn" onclick="resetBlank()">Réinitialiser (fiche vierge)</button>
+    <button class="btn" onclick="loadDemo()">Recharger l'exemple</button>
+  </div>
+
+</div>
+
+<div id="preview-wrap" class="hidden">
+  <div id="scaler">
+    <div id="page"></div>
+  </div>
+</div>
+</div>
+
+<script>
+/* ================= STATE ================= */
+let state = null;
+
+function defaultState(){
+  return {
+    offerType:'location',
+    eyebrow:'OFFRE COMMERCIALE – LOCAL À LOUER',
+    titre:'Local Commercial & Terrasse',
+    sousTitre:"Au sein du siège d'un groupe international — Rueil-Malmaison (92)",
+    accrocheHTML:'<b style="color:#C41230;font-weight:800;">Opportunité rare —</b> Local implanté au cœur du siège d\'un groupe international, offrant une visibilité et une clientèle captive exceptionnelles.',
+    photos:['',''],
+    caps:['DEVANTURE','INTÉRIEUR'],
+    chiffres:[
+      {val:'387,5 m²', lbl:'SURFACE TOTALE'},
+      {val:'250,5 m²', lbl:'BOUTIQUE'},
+      {val:'137 m²', lbl:'TERRASSE'}
+    ],
+    fin:[
+      {lbl:'Loyer annuel', val:'140 000 € HT HC / an'},
+      {lbl:'Loyer mensuel (indicatif)', val:'11 667 € HT HC / mois'},
+      {lbl:'Destination', val:'Commerce/Restauration'},
+      {lbl:'Charges', val:''},
+      {lbl:'Taxe foncière', val:'À la charge du preneur'},
+      {lbl:'Honoraires', val:'30% du loyer HT HC'}
+    ],
+    descLabel:'DESCRIPTIF DU LOCAL',
+    descriptif:"Ce local commercial bénéficie d'une configuration idéale pour une activité de commerce ou de restauration. Il se compose d'une boutique principale de 250,5 m², offrant de beaux volumes et une bonne luminosité, ainsi qu'une terrasse attenante de 137 m² permettant d'accueillir une clientèle en extérieur.\n\nImplanté au sein du siège d'un groupe international à Rueil-Malmaison (Hauts-de-Seine), le local bénéficie d'une clientèle interne importante et d'un fort trafic quotidien — un avantage compétitif majeur dans un environnement premium et sécurisé.",
+    equip:[
+      {title:'Extraction', desc:"Système d'extraction d'air en place, adapté à une activité de restauration ou alimentaire"},
+      {title:'Chambre froide', desc:'Chambre froide positive pour le stockage et la conservation des produits frais'},
+      {title:'Chambre négative', desc:'Chambre froide négative (surgélation) pour le stockage longue durée des produits surgelés'}
+    ],
+    locTitre:'RUEIL-MALMAISON — HAUTS-DE-SEINE (92)',
+    locBullets:[
+      'Commune des Hauts-de-Seine, à proximité immédiate de La Défense',
+      'Accès RER A & Transilien L — Gare de Rueil-Malmaison',
+      'Desservie par plusieurs lignes de bus (RATP / Transdev)',
+      'Autoroute A86 et RN13 à proximité immédiate — Parking sur site'
+    ]
+  };
+}
+
+const OFFER_DEFAULTS = {
+  location:{
+    eyebrow:'OFFRE COMMERCIALE – LOCAL À LOUER',
+    descLabel:'DESCRIPTIF DU LOCAL',
+    fin:[
+      {lbl:'Loyer annuel', val:''},
+      {lbl:'Loyer mensuel (indicatif)', val:''},
+      {lbl:'Destination', val:''},
+      {lbl:'Charges', val:''},
+      {lbl:'Taxe foncière', val:''},
+      {lbl:'Honoraires', val:''}
+    ]
+  },
+  cession:{
+    eyebrow:'OFFRE COMMERCIALE – CESSION DE BAIL / FONDS DE COMMERCE',
+    descLabel:'DESCRIPTIF DU FONDS',
+    fin:[
+      {lbl:'Prix de cession', val:''},
+      {lbl:'Loyer annuel actuel', val:''},
+      {lbl:'Destination', val:''},
+      {lbl:'Charges', val:''},
+      {lbl:'Taxe foncière', val:''},
+      {lbl:'Honoraires', val:''}
+    ]
+  },
+  vente:{
+    eyebrow:'OFFRE COMMERCIALE – VENTE DE MURS',
+    descLabel:'DESCRIPTIF DU BIEN',
+    fin:[
+      {lbl:'Prix de vente', val:''},
+      {lbl:'Destination', val:''},
+      {lbl:'Charges', val:''},
+      {lbl:'Taxe foncière', val:''},
+      {lbl:'Honoraires', val:''}
+    ]
+  }
+};
+
+/* ================= HELPERS ================= */
+function esc(s){
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function nl2br(s){
+  return esc(s).split('\n\n').map(p=>'<p>'+p.replace(/\n/g,'<br>')+'</p>').join('');
+}
+function setCounter(id,len,max){
+  const el = document.getElementById('cnt-'+id);
+  if(!el) return;
+  el.textContent = len+'/'+max;
+  el.className = 'counter'+(len>=max?' over':(len>=max*0.85?' warn':''));
+}
+
+/* ================= INIT ================= */
+window.addEventListener('DOMContentLoaded', ()=>{
+  if(window.innerWidth>=900) document.body.classList.add('desktop-mode');
+  loadDemo();
+  populateTemplateSelects();
+  window.addEventListener('resize', fitScale);
+});
+
+function loadDemo(){
+  state = defaultState();
+  syncFormFromState();
+  renderPreview();
+}
+function resetBlank(){
+  state = defaultState();
+  state.titre=''; state.sousTitre='';
+  state.accrocheHTML='<b style="color:#C41230;font-weight:800;">Opportunité rare —</b> ';
+  state.photos=['',''];
+  state.caps=['DEVANTURE','INTÉRIEUR'];
+  state.chiffres=[{val:'',lbl:''},{val:'',lbl:''}];
+  state.fin = OFFER_DEFAULTS.location.fin.map(r=>({...r}));
+  state.descriptif='';
+  state.equip=[{title:'',desc:''}];
+  state.locTitre=''; state.locBullets=[''];
+  state.offerType='location';
+  state.eyebrow=OFFER_DEFAULTS.location.eyebrow;
+  state.descLabel=OFFER_DEFAULTS.location.descLabel;
+  syncFormFromState();
+  renderPreview();
+}
+
+function syncFormFromState(){
+  document.getElementById('offerType').value = state.offerType;
+  document.getElementById('titre').value = state.titre;
+  setCounter('titre', state.titre.length, 55);
+  document.getElementById('sousTitre').value = state.sousTitre;
+  setCounter('sousTitre', state.sousTitre.length, 70);
+  document.getElementById('accroche-edit').innerHTML = state.accrocheHTML;
+  setCounter('accroche', document.getElementById('accroche-edit').innerText.length, 260);
+  document.getElementById('prev-photo1').src = state.photos[0]||'';
+  document.getElementById('prev-photo2').src = state.photos[1]||'';
+  document.getElementById('cap1').value = state.caps[0];
+  document.getElementById('cap2').value = state.caps[1];
+  document.getElementById('descLabel').value = state.descLabel;
+  document.getElementById('descriptif').value = state.descriptif;
+  setCounter('descriptif', state.descriptif.length, 750);
+  document.getElementById('locTitre').value = state.locTitre;
+  renderChiffresForm();
+  renderFinForm();
+  renderEquipForm();
+  renderLocForm();
+}
+
+/* ---------- generic text fields ---------- */
+function onText(key,val,max){
+  state[key]=val;
+  setCounter(key,val.length,max);
+  renderPreview();
+}
+
+/* ---------- accroche rich text ---------- */
+function fmt(type){
+  const editor = document.getElementById('accroche-edit');
+  editor.focus();
+  if(type==='bold') document.execCommand('bold');
+  else if(type==='clear') document.execCommand('removeFormat');
+  else if(type==='red'){
+    const sel = window.getSelection();
+    if(!sel.rangeCount || sel.isCollapsed) return;
+    const range = sel.getRangeAt(0);
+    const span = document.createElement('span');
+    span.style.color = '#C41230';
+    span.style.fontWeight = '700';
+    try{ range.surroundContents(span); }catch(e){
+      const content = range.extractContents();
+      span.appendChild(content);
+      range.insertNode(span);
+    }
+  }
+  onAccroche();
+}
+function onAccroche(){
+  const editor = document.getElementById('accroche-edit');
+  let text = editor.innerText;
+  if(text.length>260){
+    editor.innerText = text.slice(0,260);
+    text = editor.innerText;
+  }
+  state.accrocheHTML = editor.innerHTML;
+  setCounter('accroche', text.length, 260);
+  renderPreview();
+}
+
+/* ---------- offer type ---------- */
+function onOfferTypeChange(){
+  state.offerType = document.getElementById('offerType').value;
+  const d = OFFER_DEFAULTS[state.offerType];
+  state.eyebrow = d.eyebrow;
+  state.descLabel = d.descLabel;
+  document.getElementById('descLabel').value = state.descLabel;
+  renderPreview();
+}
+function applyOfferDefaults(){
+  const d = OFFER_DEFAULTS[state.offerType];
+  state.fin = d.fin.map(r=>({...r}));
+  renderFinForm();
+  renderPreview();
+}
+
+/* ---------- photos ---------- */
+function onPhoto(idx, input){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e=>{
+    state.photos[idx] = e.target.result;
+    document.getElementById('prev-photo'+(idx+1)).src = e.target.result;
+    renderPreview();
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ---------- chiffres clés ---------- */
+function renderChiffresForm(){
+  const c = document.getElementById('chiffres-list');
+  c.innerHTML = state.chiffres.map((row,i)=>`
+    <div class="card">
+      <button class="btn small danger rm" onclick="removeChiffre(${i})">✕</button>
+      <label class="field">Valeur</label>
+      <input type="text" maxlength="14" value="${escAttr(row.val)}" oninput="updateChiffre(${i},'val',this.value)">
+      <label class="field">Libellé</label>
+      <input type="text" maxlength="24" value="${escAttr(row.lbl)}" oninput="updateChiffre(${i},'lbl',this.value)">
+    </div>`).join('');
+}
+function updateChiffre(i,key,val){ state.chiffres[i][key]=val; renderPreview(); }
+function addChiffre(){
+  if(state.chiffres.length>=3){ alert('Maximum 3 cases pour les chiffres clés.'); return; }
+  state.chiffres.push({val:'',lbl:''});
+  renderChiffresForm(); renderPreview();
+}
+function removeChiffre(i){
+  if(state.chiffres.length<=1){ alert('Il faut garder au moins une case.'); return; }
+  state.chiffres.splice(i,1);
+  renderChiffresForm(); renderPreview();
+}
+
+/* ---------- conditions financières ---------- */
+function renderFinForm(){
+  const c = document.getElementById('fin-list');
+  c.innerHTML = state.fin.map((row,i)=>`
+    <div class="card">
+      <button class="btn small danger rm" onclick="removeFinRow(${i})">✕</button>
+      <label class="field">Libellé</label>
+      <input type="text" maxlength="30" value="${escAttr(row.lbl)}" oninput="updateFin(${i},'lbl',this.value)">
+      <label class="field">Valeur</label>
+      <input type="text" maxlength="45" value="${escAttr(row.val)}" oninput="updateFin(${i},'val',this.value)">
+    </div>`).join('');
+}
+function updateFin(i,key,val){ state.fin[i][key]=val; renderPreview(); }
+function addFinRow(){
+  if(state.fin.length>=9){ alert('Maximum 9 lignes.'); return; }
+  state.fin.push({lbl:'',val:''});
+  renderFinForm(); renderPreview();
+}
+function removeFinRow(i){
+  state.fin.splice(i,1);
+  renderFinForm(); renderPreview();
+}
+
+/* ---------- équipements ---------- */
+function renderEquipForm(){
+  const c = document.getElementById('equip-list');
+  c.innerHTML = state.equip.map((row,i)=>`
+    <div class="card">
+      <button class="btn small danger rm" onclick="removeEquip(${i})">✕</button>
+      <label class="field">Titre du tableau</label>
+      <input type="text" maxlength="28" value="${escAttr(row.title)}" oninput="updateEquip(${i},'title',this.value)">
+      <label class="field">Description</label>
+      <textarea maxlength="150" rows="3" oninput="updateEquip(${i},'desc',this.value)">${esc(row.desc)}</textarea>
+    </div>`).join('');
+}
+function updateEquip(i,key,val){ state.equip[i][key]=val; renderPreview(); }
+function addEquip(){
+  if(state.equip.length>=4){ alert("Maximum 4 tableaux d'équipements."); return; }
+  state.equip.push({title:'',desc:''});
+  renderEquipForm(); renderPreview();
+}
+function removeEquip(i){
+  if(state.equip.length<=1){ alert('Il faut garder au moins un tableau.'); return; }
+  state.equip.splice(i,1);
+  renderEquipForm(); renderPreview();
+}
+
+/* ---------- localisation ---------- */
+function renderLocForm(){
+  const c = document.getElementById('loc-list');
+  c.innerHTML = state.locBullets.map((b,i)=>`
+    <div class="card">
+      <button class="btn small danger rm" onclick="removeLocBullet(${i})">✕</button>
+      <label class="field">Ligne ${i+1}</label>
+      <input type="text" maxlength="90" value="${escAttr(b)}" oninput="updateLocBullet(${i},this.value)">
+    </div>`).join('');
+}
+function updateLocBullet(i,val){ state.locBullets[i]=val; renderPreview(); }
+function addLocBullet(){
+  if(state.locBullets.length>=6){ alert('Maximum 6 lignes.'); return; }
+  state.locBullets.push('');
+  renderLocForm(); renderPreview();
+}
+function removeLocBullet(i){
+  state.locBullets.splice(i,1);
+  renderLocForm(); renderPreview();
+}
+
+function escAttr(s){ return esc(s).replace(/"/g,'&quot;'); }
+
+/* ================= TEMPLATES (localStorage) ================= */
+function lsGet(key){ try{ return localStorage.getItem(key); }catch(e){ return null; } }
+function lsSet(key,val){ try{ localStorage.setItem(key,val); return true; }catch(e){ return false; } }
+function lsDel(key){ try{ localStorage.removeItem(key); }catch(e){} }
+function lsKeys(prefix){
+  const out = [];
+  try{
+    for(let i=0;i<localStorage.length;i++){
+      const k = localStorage.key(i);
+      if(k && k.indexOf(prefix)===0) out.push(k);
+    }
+  }catch(e){}
+  return out;
+}
+
+function populateTemplateSelects(){
+  refreshDescTemplates();
+  refreshEquipTemplates();
+}
+function refreshDescTemplates(){
+  const sel = document.getElementById('descTmplSelect');
+  sel.innerHTML = '<option value="">— choisir —</option>';
+  lsKeys('desctmpl:').forEach(k=>{
+    const name = k.replace('desctmpl:','');
+    sel.innerHTML += `<option value="${escAttr(k)}">${esc(name)}</option>`;
+  });
+}
+function refreshEquipTemplates(){
+  const sel = document.getElementById('equipTmplSelect');
+  sel.innerHTML = '<option value="">— choisir —</option>';
+  lsKeys('equiptmpl:').forEach(k=>{
+    const name = k.replace('equiptmpl:','');
+    sel.innerHTML += `<option value="${escAttr(k)}">${esc(name)}</option>`;
+  });
+}
+function saveDescTemplate(){
+  const name = prompt('Nom du modèle de descriptif :');
+  if(!name) return;
+  if(lsSet('desctmpl:'+name, state.descriptif)){
+    refreshDescTemplates();
+    alert('Modèle enregistré sur cet appareil.');
+  }else{
+    alert("Erreur lors de l'enregistrement.");
+  }
+}
+function loadDescTemplate(){
+  const key = document.getElementById('descTmplSelect').value;
+  if(!key) return;
+  const val = lsGet(key);
+  if(val!==null){
+    state.descriptif = val;
+    document.getElementById('descriptif').value = val;
+    setCounter('descriptif', val.length, 750);
+    renderPreview();
+  }
+}
+function deleteDescTemplate(){
+  const key = document.getElementById('descTmplSelect').value;
+  if(!key) return;
+  if(!confirm('Supprimer ce modèle ?')) return;
+  lsDel(key); refreshDescTemplates();
+}
+function saveEquipTemplate(){
+  const name = prompt("Nom du modèle d'équipements :");
+  if(!name) return;
+  if(lsSet('equiptmpl:'+name, JSON.stringify(state.equip))){
+    refreshEquipTemplates();
+    alert('Modèle enregistré sur cet appareil.');
+  }else{
+    alert("Erreur lors de l'enregistrement.");
+  }
+}
+function loadEquipTemplate(){
+  const key = document.getElementById('equipTmplSelect').value;
+  if(!key) return;
+  const val = lsGet(key);
+  if(val!==null){
+    state.equip = JSON.parse(val);
+    renderEquipForm();
+    renderPreview();
+  }
+}
+function deleteEquipTemplate(){
+  const key = document.getElementById('equipTmplSelect').value;
+  if(!key) return;
+  if(!confirm('Supprimer ce modèle ?')) return;
+  lsDel(key); refreshEquipTemplates();
+}
+
+/* ================= PREVIEW RENDER ================= */
+function renderPreview(){
+  const s = state;
+  const chiffresHTML = `<div class="p-chiffres" style="grid-template-columns:repeat(${s.chiffres.length},1fr);">` +
+    s.chiffres.map(c=>`<div class="box"><div class="val">${esc(c.val)}</div><div class="lbl">${esc(c.lbl)}</div></div>`).join('') +
+    `</div>`;
+
+  const finHTML = `<table class="p-fin">` +
+    s.fin.map(r=>`<tr><td>${esc(r.lbl)}</td><td>${esc(r.val)}</td></tr>`).join('') +
+    `</table>`;
+
+  const equipHeadCols = s.equip.map(()=> '1fr').join(' ');
+  const equipHTML = `<div class="p-equip" style="grid-template-columns:${equipHeadCols};">` +
+    s.equip.map(e=>`<div class="h">${esc(e.title)}</div>`).join('') +
+    s.equip.map(e=>`<div class="d">${esc(e.desc)}</div>`).join('') +
+    `</div>`;
+
+  const locHTML = `<div class="p-loc">
+      <div class="head">${esc(s.locTitre)}</div>
+      <ul>${s.locBullets.filter(b=>b.trim()!=='').map(b=>`<li>${esc(b)}</li>`).join('')}</ul>
+    </div>`;
+
+  const photosHTML = `<div class="p-photos">
+      <div class="slot">${s.photos[0]?`<img src="${s.photos[0]}">`:'<div style="height:170px;background:#f0f0f0;border-radius:4px;"></div>'}<div class="cap">${esc(s.caps[0])}</div></div>
+      <div class="slot">${s.photos[1]?`<img src="${s.photos[1]}">`:'<div style="height:170px;background:#f0f0f0;border-radius:4px;"></div>'}<div class="cap">${esc(s.caps[1])}</div></div>
+    </div>`;
+
+  document.getElementById('page').innerHTML = `
+    <div class="p-header">
+      <div class="p-logo">IMMO SHOPS</div>
+      <div class="p-tagline">CONSEIL ET DÉVELOPPEMENT EN IMMOBILIER COMMERCIAL,<br>IMMOBILIER RÉSIDENTIEL ET GESTION LOCATIVE</div>
+    </div>
+
+    <div class="p-band">
+      <div class="p-eyebrow">${esc(s.eyebrow)}</div>
+      <div class="p-title">${esc(s.titre)}</div>
+      <div class="p-subtitle">${esc(s.sousTitre)}</div>
+    </div>
+
+    <div class="p-accroche">${s.accrocheHTML}</div>
+
+    ${photosHTML}
+
+    <div class="p-h2">CHIFFRES CLÉS</div>
+    ${chiffresHTML}
+
+    <div class="p-h2">CONDITIONS FINANCIÈRES</div>
+    ${finHTML}
+
+    <div class="p-h2">${esc(s.descLabel)}</div>
+    <div class="p-desc">${nl2br(s.descriptif)}</div>
+
+    <div class="p-h2">ÉQUIPEMENTS TECHNIQUES</div>
+    ${equipHTML}
+
+    <div class="p-h2">LOCALISATION &amp; ACCESSIBILITÉ</div>
+    ${locHTML}
+
+    <div class="p-footer">
+      <div class="l1">IMMOSHOPS — 23 rue Rivay — 92300 LEVALLOIS PERRET &nbsp;|&nbsp; immoshops.fr &nbsp;|&nbsp; immo.shops@immoshops.fr</div>
+      <div class="l2">Données indicatives et non contractuelles<br>RCS Nanterre 8401 505 95 95 — Carte CPI Paris Île-de-France N° CPI 9201 2021 000 000 212</div>
+    </div>
+  `;
+  fitScale();
+}
+
+/* ================= TABS / SCALING ================= */
+function showTab(which){
+  const isDesktop = document.body.classList.contains('desktop-mode');
+  if(!isDesktop){
+    document.getElementById('edit-panel').classList.toggle('hidden', which!=='edit');
+    document.getElementById('preview-wrap').classList.toggle('hidden', which!=='preview');
+    document.getElementById('tab-edit').classList.toggle('active', which==='edit');
+    document.getElementById('tab-preview').classList.toggle('active', which==='preview');
+  }
+  if(which==='preview') setTimeout(fitScale, 30);
+}
+function fitScale(){
+  const wrap = document.getElementById('preview-wrap');
+  const scaler = document.getElementById('scaler');
+  const page = document.getElementById('page');
+  if(wrap.classList.contains('hidden') && !document.body.classList.contains('desktop-mode')) return;
+  const availW = wrap.clientWidth - 16;
+  const scale = Math.min(1, availW/794);
+  scaler.style.transform = `scale(${scale})`;
+  scaler.style.width = (794*scale)+'px';
+  scaler.style.height = (page.offsetHeight*scale)+'px';
+}
+
+/* ================= PDF EXPORT ================= */
+async function generatePDF(){
+  const btn = document.getElementById('btn-pdf');
+  btn.disabled = true;
+  const label = btn.textContent;
+  btn.textContent = 'Génération…';
+  try{
+    const page = document.getElementById('page');
+    const prevTransform = document.getElementById('scaler').style.transform;
+    document.getElementById('scaler').style.transform = 'none';
+    const canvas = await html2canvas(page, {scale:4, useCORS:true, backgroundColor:'#ffffff'});
+    document.getElementById('scaler').style.transform = prevTransform;
+    fitScale();
+    const imgData = canvas.toDataURL('image/jpeg', 0.97);
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({unit:'mm', format:'a4', orientation:'portrait'});
+    const pageW = 210, pageH = 297;
+    const ratio = canvas.height/canvas.width;
+    let imgW = pageW, imgH = pageW*ratio;
+    if(imgH>pageH){ imgH = pageH; imgW = pageH/ratio; }
+    const offX = (pageW-imgW)/2, offY = 0;
+    pdf.addImage(imgData,'JPEG',offX,offY,imgW,imgH,undefined,'FAST');
+    const filename = 'Fiche_Produit_'+(state.titre||'sans_titre').replace(/[^a-zA-Z0-9]+/g,'_').slice(0,40)+'.pdf';
+    pdf.save(filename);
+  }catch(e){
+    alert('Erreur lors de la génération du PDF : '+e.message);
+  }finally{
+    btn.disabled = false;
+    btn.textContent = label;
+  }
+}
+</script>
+</body>
+</html>
