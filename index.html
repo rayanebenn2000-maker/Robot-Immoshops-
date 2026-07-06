@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Générateur de fiche produit — IMMOSHOPS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Space+Grotesk:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
@@ -17,9 +20,8 @@
     --ink:#1c1c1c;
   }
   *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;background:#eef0f3;color:var(--ink);font-family:Arial,Helvetica,sans-serif;}
-  h1,h2,h3{font-family:'Poppins',Arial,sans-serif;}
-  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+  html,body{margin:0;padding:0;background:#eef0f3;color:var(--ink);font-family:'Inter',Arial,sans-serif;}
+  h1,h2,h3{font-family:'Space Grotesk',Arial,sans-serif;}
   body{font-family:'Inter',Arial,sans-serif;}
 
   #topbar{
@@ -89,6 +91,7 @@
   }
   .toolbar button.b{font-weight:800;}
   .toolbar button.r{color:var(--red);font-weight:800;}
+  .toolbar input[type=color]{width:32px;height:30px;padding:2px;border-radius:6px;border:1px solid #d5d5d8;background:#fff;}
   [contenteditable]{
     border:1px solid #d5d5d8;border-radius:7px;padding:9px 10px;min-height:56px;font-size:14px;line-height:1.4;background:#fff;
   }
@@ -110,12 +113,11 @@
     font-family:'Inter',Arial,sans-serif;
   }
   #page .p-header{text-align:center;margin-bottom:14px;}
-  #page .p-logo{font-family:'Poppins',Arial,sans-serif;font-weight:800;font-size:30px;letter-spacing:2px;color:var(--red);margin:0;}
-  #page .p-tagline{font-size:9.5px;letter-spacing:.4px;color:#555;margin-top:2px;font-weight:600;}
+  #page .p-logo-img{max-width:340px;width:70%;height:auto;display:inline-block;}
 
   #page .p-band{background:var(--red);color:#fff;border-radius:6px;padding:12px 16px;text-align:center;margin-bottom:14px;}
   #page .p-eyebrow{font-size:11px;letter-spacing:1.5px;font-weight:700;opacity:.92;}
-  #page .p-title{font-family:'Poppins',Arial,sans-serif;font-size:25px;font-weight:800;margin:3px 0 2px;}
+  #page .p-title{font-family:'Space Grotesk',Arial,sans-serif;font-size:29px;font-weight:800;margin:4px 0 2px;letter-spacing:.2px;}
   #page .p-subtitle{font-size:13px;font-weight:500;opacity:.95;}
 
   #page .p-accroche{
@@ -131,6 +133,7 @@
   #page .p-photos .cap{font-size:10.5px;font-weight:800;letter-spacing:1px;color:var(--red);margin-top:5px;}
 
   #page .p-h2{
+    font-family:'Space Grotesk',Arial,sans-serif;
     font-size:13px;font-weight:800;letter-spacing:.4px;color:var(--red);
     margin:16px 0 8px;padding-bottom:4px;border-bottom:2px solid var(--red);
   }
@@ -140,16 +143,17 @@
     border:1px solid var(--red-pale2);background:var(--red-pale);border-radius:6px;
     text-align:center;padding:12px 6px;
   }
-  #page .p-chiffres .val{font-size:20px;font-weight:800;color:var(--red);font-family:'Poppins',Arial,sans-serif;}
+  #page .p-chiffres .val{font-size:20px;font-weight:800;color:var(--red);font-family:'Space Grotesk',Arial,sans-serif;}
   #page .p-chiffres .lbl{font-size:9.5px;color:#555;letter-spacing:.5px;font-weight:700;margin-top:2px;}
 
   #page .p-fin{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:4px;}
   #page .p-fin td{padding:7px 10px;border-bottom:1px solid var(--border);}
-  #page .p-fin td:first-child{background:#f5f5f6;font-weight:700;width:38%;}
-  #page .p-fin td:last-child{font-weight:600;}
+  #page .p-fin td:first-child{background:#f5f5f6;font-weight:700;width:38%;color:var(--ink);}
+  #page .p-fin td:last-child{font-weight:400;color:var(--ink);}
+  #page .p-fin .hl{color:var(--red);font-weight:800;}
 
   #page .p-desc{font-size:12px;line-height:1.55;text-align:justify;}
-  #page .p-desc p{margin:0 0 8px;}
+  #page .p-desc p, #page .p-desc div{margin:0 0 6px;}
   #page .p-desc b{font-weight:700;}
 
   #page .p-equip{display:grid;width:100%;border:1px solid var(--red-pale2);border-radius:4px;overflow:hidden;}
@@ -163,10 +167,10 @@
   #page .p-loc li::marker{color:var(--red);}
 
   #page .p-footer{
-    margin-top:16px;border-top:2px solid var(--red);padding-top:8px;text-align:center;
+    margin-top:16px;background:var(--red);border-radius:6px;padding:10px 14px;text-align:center;
   }
-  #page .p-footer .l1{font-size:11px;font-weight:700;}
-  #page .p-footer .l2{font-size:8.5px;color:#777;margin-top:3px;}
+  #page .p-footer .l1{font-size:11px;font-weight:700;color:#fff;}
+  #page .p-footer .l2{font-size:8.5px;color:rgba(255,255,255,.85);margin-top:3px;}
 
   @media (min-width:900px){
     body.desktop-mode #topbar{max-width:1200px;margin:0 auto;}
@@ -222,13 +226,13 @@
     <summary>Accroche (bandeau rouge clair)</summary>
     <div class="section-body">
       <div class="toolbar">
-        <button class="b" title="Gras" onmousedown="event.preventDefault()" onclick="fmt('bold')">G</button>
-        <button class="r" title="Rouge" onmousedown="event.preventDefault()" onclick="fmt('red')">R</button>
-        <button title="Effacer la mise en forme" onmousedown="event.preventDefault()" onclick="fmt('clear')">✕</button>
+        <button class="b" title="Gras" onmousedown="event.preventDefault()" onclick="applyBold('accroche-edit')">G</button>
+        <input type="color" value="#C41230" title="Couleur" onmousedown="event.preventDefault()" oninput="applyColor('accroche-edit', this.value)">
+        <button title="Effacer la mise en forme" onmousedown="event.preventDefault()" onclick="clearFmt('accroche-edit')">✕</button>
       </div>
       <div id="accroche-edit" contenteditable="true" oninput="onAccroche()"></div>
       <div class="counter" id="cnt-accroche">0/260</div>
-      <div class="hint">Sélectionne une portion de texte puis clique sur G (gras) ou R (rouge) pour la mettre en valeur, comme "Opportunité rare" dans le modèle.</div>
+      <div class="hint">Sélectionne une portion de texte puis clique sur G (gras) ou choisis une couleur pour la mettre en valeur, comme "Opportunité rare" dans le modèle.</div>
     </div>
   </details>
 
@@ -279,16 +283,22 @@
       <input type="text" id="descLabel" maxlength="35" oninput="onText('descLabel',this.value,35)">
 
       <label class="field">Texte descriptif</label>
-      <textarea id="descriptif" maxlength="750" rows="6" oninput="onText('descriptif',this.value,750)"></textarea>
+      <div class="toolbar">
+        <button class="b" title="Gras" onmousedown="event.preventDefault()" onclick="applyBold('descriptif-edit')">G</button>
+        <input type="color" value="#C41230" title="Couleur" onmousedown="event.preventDefault()" oninput="applyColor('descriptif-edit', this.value)">
+        <button title="Effacer la mise en forme" onmousedown="event.preventDefault()" onclick="clearFmt('descriptif-edit')">✕</button>
+      </div>
+      <div id="descriptif-edit" contenteditable="true" style="min-height:130px;" oninput="onDescriptif()"></div>
       <div class="counter" id="cnt-descriptif">0/750</div>
 
-      <label class="field">Modèles enregistrés (stockage local à ce navigateur)</label>
+      <label class="field">Modèles enregistrés</label>
       <select class="tmpl" id="descTmplSelect"></select>
       <div class="btnrow">
         <button class="btn small" onclick="loadDescTemplate()">Charger</button>
         <button class="btn small" onclick="saveDescTemplate()">Enregistrer comme modèle</button>
         <button class="btn small danger" onclick="deleteDescTemplate()">Supprimer ce modèle</button>
       </div>
+      <div class="hint">Astuce : rédige un modèle générique avec des repères du type [SURFACE] ou [VILLE], enregistre-le, puis charge-le et remplace les repères à chaque nouvelle fiche.</div>
     </div>
   </details>
 
@@ -370,7 +380,7 @@ function defaultState(){
       {lbl:'Honoraires', val:'30% du loyer HT HC'}
     ],
     descLabel:'DESCRIPTIF DU LOCAL',
-    descriptif:"Ce local commercial bénéficie d'une configuration idéale pour une activité de commerce ou de restauration. Il se compose d'une boutique principale de 250,5 m², offrant de beaux volumes et une bonne luminosité, ainsi qu'une terrasse attenante de 137 m² permettant d'accueillir une clientèle en extérieur.\n\nImplanté au sein du siège d'un groupe international à Rueil-Malmaison (Hauts-de-Seine), le local bénéficie d'une clientèle interne importante et d'un fort trafic quotidien — un avantage compétitif majeur dans un environnement premium et sécurisé.",
+    descriptifHTML:"<div>Ce local commercial bénéficie d'une configuration idéale pour une activité de commerce ou de restauration. Il se compose d'une boutique principale de 250,5 m², offrant de beaux volumes et une bonne luminosité, ainsi qu'une terrasse attenante de 137 m² permettant d'accueillir une clientèle en extérieur.</div><div><br></div><div>Implanté au sein du siège d'un groupe international à Rueil-Malmaison (Hauts-de-Seine), le local bénéficie d'une clientèle interne importante et d'un fort trafic quotidien — un avantage compétitif majeur dans un environnement premium et sécurisé.</div>",
     equip:[
       {title:'Extraction', desc:"Système d'extraction d'air en place, adapté à une activité de restauration ou alimentaire"},
       {title:'Chambre froide', desc:'Chambre froide positive pour le stockage et la conservation des produits frais'},
@@ -428,9 +438,6 @@ const OFFER_DEFAULTS = {
 function esc(s){
   return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
-function nl2br(s){
-  return esc(s).split('\n\n').map(p=>'<p>'+p.replace(/\n/g,'<br>')+'</p>').join('');
-}
 function setCounter(id,len,max){
   const el = document.getElementById('cnt-'+id);
   if(!el) return;
@@ -459,7 +466,7 @@ function resetBlank(){
   state.caps=['DEVANTURE','INTÉRIEUR'];
   state.chiffres=[{val:'',lbl:''},{val:'',lbl:''}];
   state.fin = OFFER_DEFAULTS.location.fin.map(r=>({...r}));
-  state.descriptif='';
+  state.descriptifHTML='';
   state.equip=[{title:'',desc:''}];
   state.locTitre=''; state.locBullets=[''];
   state.offerType='location';
@@ -482,8 +489,8 @@ function syncFormFromState(){
   document.getElementById('cap1').value = state.caps[0];
   document.getElementById('cap2').value = state.caps[1];
   document.getElementById('descLabel').value = state.descLabel;
-  document.getElementById('descriptif').value = state.descriptif;
-  setCounter('descriptif', state.descriptif.length, 750);
+  document.getElementById('descriptif-edit').innerHTML = state.descriptifHTML;
+  setCounter('descriptif', document.getElementById('descriptif-edit').innerText.length, 750);
   document.getElementById('locTitre').value = state.locTitre;
   renderChiffresForm();
   renderFinForm();
@@ -498,26 +505,36 @@ function onText(key,val,max){
   renderPreview();
 }
 
-/* ---------- accroche rich text ---------- */
-function fmt(type){
-  const editor = document.getElementById('accroche-edit');
+/* ---------- rich text (accroche + descriptif) ---------- */
+function applyBold(editorId){
+  document.getElementById(editorId).focus();
+  document.execCommand('bold');
+  onRichInput(editorId);
+}
+function applyColor(editorId, color){
+  const editor = document.getElementById(editorId);
   editor.focus();
-  if(type==='bold') document.execCommand('bold');
-  else if(type==='clear') document.execCommand('removeFormat');
-  else if(type==='red'){
-    const sel = window.getSelection();
-    if(!sel.rangeCount || sel.isCollapsed) return;
-    const range = sel.getRangeAt(0);
-    const span = document.createElement('span');
-    span.style.color = '#C41230';
-    span.style.fontWeight = '700';
-    try{ range.surroundContents(span); }catch(e){
-      const content = range.extractContents();
-      span.appendChild(content);
-      range.insertNode(span);
-    }
+  const sel = window.getSelection();
+  if(!sel.rangeCount || sel.isCollapsed) return;
+  const range = sel.getRangeAt(0);
+  const span = document.createElement('span');
+  span.style.color = color;
+  span.style.fontWeight = '700';
+  try{ range.surroundContents(span); }catch(e){
+    const content = range.extractContents();
+    span.appendChild(content);
+    range.insertNode(span);
   }
-  onAccroche();
+  onRichInput(editorId);
+}
+function clearFmt(editorId){
+  document.getElementById(editorId).focus();
+  document.execCommand('removeFormat');
+  onRichInput(editorId);
+}
+function onRichInput(editorId){
+  if(editorId==='accroche-edit') onAccroche();
+  else if(editorId==='descriptif-edit') onDescriptif();
 }
 function onAccroche(){
   const editor = document.getElementById('accroche-edit');
@@ -528,6 +545,17 @@ function onAccroche(){
   }
   state.accrocheHTML = editor.innerHTML;
   setCounter('accroche', text.length, 260);
+  renderPreview();
+}
+function onDescriptif(){
+  const editor = document.getElementById('descriptif-edit');
+  let text = editor.innerText;
+  if(text.length>750){
+    editor.innerText = text.slice(0,750);
+    text = editor.innerText;
+  }
+  state.descriptifHTML = editor.innerHTML;
+  setCounter('descriptif', text.length, 750);
   renderPreview();
 }
 
@@ -654,7 +682,7 @@ function removeLocBullet(i){
 
 function escAttr(s){ return esc(s).replace(/"/g,'&quot;'); }
 
-/* ================= TEMPLATES (localStorage) ================= */
+/* ================= TEMPLATES (stockage local au navigateur) ================= */
 function lsGet(key){ try{ return localStorage.getItem(key); }catch(e){ return null; } }
 function lsSet(key,val){ try{ localStorage.setItem(key,val); return true; }catch(e){ return false; } }
 function lsDel(key){ try{ localStorage.removeItem(key); }catch(e){} }
@@ -668,7 +696,6 @@ function lsKeys(prefix){
   }catch(e){}
   return out;
 }
-
 function populateTemplateSelects(){
   refreshDescTemplates();
   refreshEquipTemplates();
@@ -692,7 +719,7 @@ function refreshEquipTemplates(){
 function saveDescTemplate(){
   const name = prompt('Nom du modèle de descriptif :');
   if(!name) return;
-  if(lsSet('desctmpl:'+name, state.descriptif)){
+  if(lsSet('desctmpl:'+name, state.descriptifHTML)){
     refreshDescTemplates();
     alert('Modèle enregistré sur cet appareil.');
   }else{
@@ -704,9 +731,10 @@ function loadDescTemplate(){
   if(!key) return;
   const val = lsGet(key);
   if(val!==null){
-    state.descriptif = val;
-    document.getElementById('descriptif').value = val;
-    setCounter('descriptif', val.length, 750);
+    state.descriptifHTML = val;
+    const editor = document.getElementById('descriptif-edit');
+    editor.innerHTML = val;
+    setCounter('descriptif', editor.innerText.length, 750);
     renderPreview();
   }
 }
@@ -751,7 +779,7 @@ function renderPreview(){
     `</div>`;
 
   const finHTML = `<table class="p-fin">` +
-    s.fin.map(r=>`<tr><td>${esc(r.lbl)}</td><td>${esc(r.val)}</td></tr>`).join('') +
+    s.fin.map((r,i)=>`<tr><td>${esc(r.lbl)}</td><td${i===0?' class="hl"':''}>${esc(r.val)}</td></tr>`).join('') +
     `</table>`;
 
   const equipHeadCols = s.equip.map(()=> '1fr').join(' ');
@@ -772,8 +800,7 @@ function renderPreview(){
 
   document.getElementById('page').innerHTML = `
     <div class="p-header">
-      <div class="p-logo">IMMO SHOPS</div>
-      <div class="p-tagline">CONSEIL ET DÉVELOPPEMENT EN IMMOBILIER COMMERCIAL,<br>IMMOBILIER RÉSIDENTIEL ET GESTION LOCATIVE</div>
+      <img class="p-logo-img" src="logo-immoshops.png" alt="IMMO SHOPS">
     </div>
 
     <div class="p-band">
@@ -793,7 +820,7 @@ function renderPreview(){
     ${finHTML}
 
     <div class="p-h2">${esc(s.descLabel)}</div>
-    <div class="p-desc">${nl2br(s.descriptif)}</div>
+    <div class="p-desc">${s.descriptifHTML}</div>
 
     <div class="p-h2">ÉQUIPEMENTS TECHNIQUES</div>
     ${equipHTML}
@@ -839,10 +866,11 @@ async function generatePDF(){
   const label = btn.textContent;
   btn.textContent = 'Génération…';
   try{
+    if(document.fonts && document.fonts.ready){ await document.fonts.ready; }
     const page = document.getElementById('page');
     const prevTransform = document.getElementById('scaler').style.transform;
     document.getElementById('scaler').style.transform = 'none';
-    const canvas = await html2canvas(page, {scale:4, useCORS:true, backgroundColor:'#ffffff'});
+    const canvas = await html2canvas(page, {scale:4, useCORS:true, allowTaint:true, backgroundColor:'#ffffff'});
     document.getElementById('scaler').style.transform = prevTransform;
     fitScale();
     const imgData = canvas.toDataURL('image/jpeg', 0.97);
