@@ -917,22 +917,16 @@ async function generatePDF(){
     const ratio = canvas.height/canvas.width;
     let imgW = pageW;
     let imgH = pageW*ratio;
-    if(imgH <= pageH + 22){
-      if(imgH > pageH){
-        const k = pageH/imgH;
-        imgH = pageH;
-        imgW = pageW*k;
-      }
-      const offX = (pageW-imgW)/2;
-      pdf.addImage(imgData,'JPEG',offX,0,imgW,imgH,undefined,'FAST');
-    } else {
-      let remaining = imgH, position = 0;
-      while(remaining > 0){
-        pdf.addImage(imgData,'JPEG',0,position,imgW,imgH,undefined,'FAST');
-        remaining -= pageH;
-        if(remaining > 0){ pdf.addPage(); position -= pageH; }
-      }
+    // TOUJOURS une seule page A4 : si le contenu dépasse en hauteur, on le comprime
+    // pour qu'il tienne pile sur la page (jamais de 2e page)
+    if(imgH > pageH){
+      const k = pageH/imgH;
+      imgH = pageH;
+      imgW = pageW*k;
     }
+    const offX = (pageW-imgW)/2;
+    const offY = (pageH-imgH)/2;
+    pdf.addImage(imgData,'JPEG',offX,offY,imgW,imgH,undefined,'FAST');
     const filename = 'Fiche_Produit_'+(state.titre||'sans_titre').replace(/[^a-zA-Z0-9]+/g,'_').slice(0,40)+'.pdf';
     pdf.save(filename);
   }catch(e){
