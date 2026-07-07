@@ -9,6 +9,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Space+Grotesk:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
   :root{
     --red:#C41230;
@@ -106,13 +108,25 @@
 
   select.tmpl{margin-top:6px;}
 
+  /* ---------- IMPORT PANEL ---------- */
+  #import-panel{padding:16px 14px 90px;max-width:520px;margin:0 auto;}
+  .import-inner{background:#1a1a1e;border:1px solid #2a2a2e;border-radius:12px;padding:18px 16px;}
+  .import-title{margin:0 0 6px;font-size:17px;color:#f0f0f2;}
+  .import-sub{font-size:12.5px;color:#a0a0a8;line-height:1.5;margin:0 0 16px;}
+  .import-btn{display:block;text-align:center;background:var(--red);color:#fff;padding:14px;border-radius:9px;font-weight:700;font-size:14px;cursor:pointer;}
+  .import-status{margin-top:14px;font-size:13px;color:#d8d8dd;background:#0f0f11;border:1px solid #2a2a2e;border-radius:8px;padding:12px;line-height:1.5;}
+  .import-found{font-size:12px;font-weight:700;color:#b8b8bd;margin:16px 0 6px;}
+  .import-text{background:#0f0f11;border:1px solid #2a2a2e;border-radius:8px;padding:10px;font-size:11.5px;color:#c8c8cd;max-height:200px;overflow:auto;white-space:pre-wrap;line-height:1.4;}
+  .import-note{font-size:11px;color:#8a8a90;margin-top:10px;line-height:1.4;}
+
   /* ---------- A4 PAGE ---------- */
   #scaler{transform-origin:top left;}
   #page{
-    width:794px;min-height:1123px;background:#fff;color:var(--ink);
-    padding:16px 28px 12px;position:relative;
+    width:794px;height:1123px;background:#fff;color:var(--ink);
+    padding:16px 28px 12px;position:relative;overflow:hidden;
     border:1px solid #ccc;
     font-family:'Inter',Arial,sans-serif;
+    display:flex;flex-direction:column;
   }
   #page .p-header{text-align:center;margin-bottom:10px;}
   #page .p-logo-img{max-width:340px;width:70%;height:auto;display:inline-block;}
@@ -132,6 +146,11 @@
   #page .p-photos{display:flex;gap:14px;margin-bottom:6px;}
   #page .p-photos .slot{flex:1;text-align:center;}
   #page .p-photos img{width:100%;height:140px;object-fit:cover;border-radius:4px;display:block;}
+  #page .p-photos .ph-wrap{position:relative;width:100%;border-radius:4px;overflow:hidden;}
+  #page .p-photos .ph-wrap img{width:100%;height:100%;object-fit:cover;border-radius:4px;display:block;}
+  #page .p-photos .ph-handle{position:absolute;right:6px;bottom:6px;width:20px;height:20px;border-radius:5px;background:rgba(196,18,48,.9);border:2px solid #fff;cursor:ns-resize;touch-action:none;box-shadow:0 1px 3px rgba(0,0,0,.4);}
+  #page.exporting .ph-handle{display:none !important;}
+  #page .p-photos .ph-handle:after{content:'⤡';color:#fff;font-size:12px;position:absolute;top:1px;left:4px;}
   #page .p-photos .cap{font-size:10.5px;font-weight:800;letter-spacing:1px;color:var(--red);margin-top:5px;}
 
   #page .p-h2{
@@ -189,7 +208,8 @@
 <div id="topbar">
   <button id="tab-edit" class="tab active" onclick="showTab('edit')">Édition</button>
   <button id="tab-preview" class="tab" onclick="showTab('preview')">Aperçu</button>
-  <button id="btn-pdf" onclick="generatePDF()">Télécharger PDF HD</button>
+  <button id="tab-import" class="tab" onclick="showTab('import')">Importer</button>
+  <button id="btn-pdf" onclick="generatePDF()">PDF HD</button>
 </div>
 
 <div id="main">
@@ -355,6 +375,27 @@
     <div id="page"></div>
   </div>
 </div>
+
+<div id="import-panel" class="hidden">
+  <div class="import-inner">
+    <h3 class="import-title">Importer une fiche existante</h3>
+    <p class="import-sub">Prends en photo ou uploade le PDF d'une fiche (partenaire, ancienne offre…). L'appli lit le texte et pré-remplit automatiquement les champs. Tu pourras tout ajuster ensuite dans l'onglet Édition — rien n'est perdu.</p>
+
+    <label class="import-btn" for="import-file">📄 Choisir une photo ou un PDF</label>
+    <input type="file" id="import-file" accept="image/*,application/pdf" style="display:none" onchange="onImportFile(this)">
+
+    <div id="import-status" class="import-status hidden"></div>
+
+    <div id="import-preview" class="hidden">
+      <div class="import-found">Texte détecté :</div>
+      <div id="import-text" class="import-text"></div>
+      <div class="btnrow" style="margin-top:12px;">
+        <button class="btn primary" onclick="applyImportedData()">Remplir la fiche avec ces infos</button>
+      </div>
+      <div class="import-note">Astuce : plus la photo est nette et droite, meilleur est le résultat. Sur un vrai PDF, c'est encore plus fiable.</div>
+    </div>
+  </div>
+</div>
 </div>
 
 <script>
@@ -369,6 +410,8 @@ function defaultState(){
     sousTitre:"Au sein du siège d'un groupe international — Rueil-Malmaison (92)",
     accrocheHTML:'<b style="color:#C41230;font-weight:800;">Opportunité rare —</b> Local implanté au cœur du siège d\'un groupe international, offrant une visibilité et une clientèle captive exceptionnelles.',
     photos:['',''],
+    photoH:[140,140],
+    photoPos:[50,50],
     caps:['DEVANTURE','INTÉRIEUR'],
     chiffres:[
       {val:'387,5 m²', lbl:'SURFACE TOTALE'},
@@ -467,9 +510,28 @@ function preloadLogo(){
     .catch(()=>{ /* garde le chemin par défaut si le fetch échoue */ });
 }
 
+/* ================= AUTO-SAVE (l'édition n'est jamais perdue) ================= */
+function saveState(){
+  try{ localStorage.setItem('fiche:autosave', JSON.stringify(state)); }catch(e){}
+}
+function restoreState(){
+  try{
+    const raw = localStorage.getItem('fiche:autosave');
+    if(raw){ return JSON.parse(raw); }
+  }catch(e){}
+  return null;
+}
+
 window.addEventListener('DOMContentLoaded', ()=>{
   if(window.innerWidth>=900) document.body.classList.add('desktop-mode');
-  loadDemo();
+  const saved = restoreState();
+  if(saved){
+    state = saved;
+    syncFormFromState();
+    renderPreview();
+  } else {
+    loadDemo();
+  }
   preloadLogo();
   populateTemplateSelects();
   window.addEventListener('resize', fitScale);
@@ -481,10 +543,13 @@ function loadDemo(){
   renderPreview();
 }
 function resetBlank(){
+  try{ localStorage.removeItem('fiche:autosave'); }catch(e){}
   state = defaultState();
   state.titre=''; state.sousTitre='';
   state.accrocheHTML='<b style="color:#C41230;font-weight:800;">Opportunité rare —</b> ';
   state.photos=['',''];
+  state.photoH=[140,140];
+  state.photoPos=[50,50];
   state.caps=['DEVANTURE','INTÉRIEUR'];
   state.chiffres=[{val:'',lbl:''},{val:'',lbl:''}];
   state.fin = OFFER_DEFAULTS.location.fin.map(r=>({...r}));
@@ -815,8 +880,8 @@ function renderPreview(){
     </div>`;
 
   const photosHTML = `<div class="p-photos">
-      <div class="slot">${s.photos[0]?`<img src="${s.photos[0]}">`:'<div style="height:170px;background:#f0f0f0;border-radius:4px;"></div>'}<div class="cap">${esc(s.caps[0])}</div></div>
-      <div class="slot">${s.photos[1]?`<img src="${s.photos[1]}">`:'<div style="height:170px;background:#f0f0f0;border-radius:4px;"></div>'}<div class="cap">${esc(s.caps[1])}</div></div>
+      <div class="slot">${s.photos[0]?`<div class="ph-wrap" data-idx="0" style="height:${(s.photoH&&s.photoH[0])||140}px;"><img src="${s.photos[0]}" style="object-position:50% ${(s.photoPos&&s.photoPos[0])||50}%;"><span class="ph-handle" data-idx="0"></span></div>`:'<div style="height:140px;background:#f0f0f0;border-radius:4px;"></div>'}<div class="cap">${esc(s.caps[0])}</div></div>
+      <div class="slot">${s.photos[1]?`<div class="ph-wrap" data-idx="1" style="height:${(s.photoH&&s.photoH[1])||140}px;"><img src="${s.photos[1]}" style="object-position:50% ${(s.photoPos&&s.photoPos[1])||50}%;"><span class="ph-handle" data-idx="1"></span></div>`:'<div style="height:140px;background:#f0f0f0;border-radius:4px;"></div>'}<div class="cap">${esc(s.caps[1])}</div></div>
     </div>`;
 
   document.getElementById('page').innerHTML = `
@@ -854,19 +919,21 @@ function renderPreview(){
       <div class="l2">Données indicatives et non contractuelles<br>RCS Nanterre 8401 505 95 95 — Carte CPI Paris Île-de-France N° CPI 9201 2021 000 000 212</div>
     </div>
   `;
+  saveState();
   fitScale();
 }
 
 /* ================= TABS / SCALING ================= */
 function showTab(which){
-  const isDesktop = document.body.classList.contains('desktop-mode');
-  if(!isDesktop){
-    document.getElementById('edit-panel').classList.toggle('hidden', which!=='edit');
-    const pw = document.getElementById('preview-wrap');
-    pw.classList.toggle('offscreen', which!=='preview');
-    document.getElementById('tab-edit').classList.toggle('active', which==='edit');
-    document.getElementById('tab-preview').classList.toggle('active', which==='preview');
-  }
+  const edit = document.getElementById('edit-panel');
+  const imp = document.getElementById('import-panel');
+  const pw = document.getElementById('preview-wrap');
+  edit.classList.toggle('hidden', which!=='edit');
+  imp.classList.toggle('hidden', which!=='import');
+  pw.classList.toggle('offscreen', which!=='preview');
+  document.getElementById('tab-edit').classList.toggle('active', which==='edit');
+  document.getElementById('tab-preview').classList.toggle('active', which==='preview');
+  document.getElementById('tab-import').classList.toggle('active', which==='import');
   if(which==='preview') setTimeout(fitScale, 30);
 }
 function fitScale(){
@@ -881,7 +948,191 @@ function fitScale(){
   scaler.style.height = (page.offsetHeight*scale)+'px';
 }
 
-/* ================= PDF EXPORT ================= */
+/* ================= IMPORT / OCR (gratuit, sans clé) ================= */
+let importedText = '';
+
+function setImportStatus(msg){
+  const el = document.getElementById('import-status');
+  el.classList.remove('hidden');
+  el.innerHTML = msg;
+}
+
+async function onImportFile(input){
+  const file = input.files[0];
+  if(!file) return;
+  document.getElementById('import-preview').classList.add('hidden');
+  setImportStatus('Lecture en cours… (cela peut prendre 10 à 30 secondes selon la taille)');
+  try{
+    let images = [];
+    if(file.type === 'application/pdf'){
+      images = await pdfToImages(file);
+    } else {
+      images = [await fileToDataURL(file)];
+    }
+    let fullText = '';
+    for(let i=0;i<images.length;i++){
+      setImportStatus(`Analyse de la page ${i+1}/${images.length}…`);
+      const { data } = await Tesseract.recognize(images[i], 'fra');
+      fullText += '\n' + data.text;
+    }
+    importedText = fullText.trim();
+    document.getElementById('import-text').textContent = importedText || '(aucun texte détecté)';
+    document.getElementById('import-preview').classList.remove('hidden');
+    setImportStatus('Lecture terminée. Vérifie le texte détecté, puis remplis la fiche.');
+  }catch(e){
+    setImportStatus('Erreur lors de la lecture : '+e.message+'. Réessaie avec une image plus nette ou un PDF.');
+  }
+}
+
+function fileToDataURL(file){
+  return new Promise((res,rej)=>{
+    const fr = new FileReader();
+    fr.onload = ()=>res(fr.result);
+    fr.onerror = rej;
+    fr.readAsDataURL(file);
+  });
+}
+
+async function pdfToImages(file){
+  const buf = await file.arrayBuffer();
+  if(window.pdfjsLib){
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+  const pdf = await pdfjsLib.getDocument({data:buf}).promise;
+  const images = [];
+  const maxPages = Math.min(pdf.numPages, 3);
+  for(let p=1;p<=maxPages;p++){
+    const pageObj = await pdf.getPage(p);
+    const viewport = pageObj.getViewport({scale:2});
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width; canvas.height = viewport.height;
+    await pageObj.render({canvasContext:canvas.getContext('2d'), viewport}).promise;
+    images.push(canvas.toDataURL('image/png'));
+  }
+  return images;
+}
+
+/* --- extraction intelligente par mots-clés (immobilier commercial FR) --- */
+function parseImported(text){
+  const t = text.replace(/\r/g,'');
+  const lines = t.split('\n').map(l=>l.trim()).filter(l=>l);
+  const result = {};
+
+  function findValue(keywords){
+    for(const line of lines){
+      const low = line.toLowerCase();
+      for(const kw of keywords){
+        if(low.includes(kw)){
+          let val = line;
+          const idx = line.indexOf(':');
+          if(idx>=0) val = line.slice(idx+1).trim();
+          else {
+            const re = new RegExp(kw, 'i');
+            val = line.replace(re,'').trim();
+          }
+          if(val) return val;
+        }
+      }
+    }
+    return '';
+  }
+  const surfaces = [];
+  const surfRe = /(\d[\d\s.,]*)\s*m[²2]/gi;
+  let m;
+  while((m = surfRe.exec(t))!==null){ surfaces.push(m[1].trim().replace(/\s+/g,' ')+' m²'); }
+
+  result.loyerAnnuel = findValue(['loyer annuel','loyer / an','loyer /an']);
+  result.loyerMensuel = findValue(['loyer mensuel','/ mois','loyer indicatif']);
+  result.destination = findValue(['destination']);
+  result.charges = findValue(['charges']);
+  result.taxe = findValue(['taxe foncière','taxe fonciere','teom']);
+  result.honoraires = findValue(['honoraires']);
+  result.surfaces = surfaces;
+  result.fullText = t;
+  return result;
+}
+
+function applyImportedData(){
+  if(!importedText){ alert('Aucun texte à importer.'); return; }
+  const d = parseImported(importedText);
+
+  function setFin(lb, val){
+    if(!val) return;
+    const row = state.fin.find(r=>r.lbl.toLowerCase().includes(lb));
+    if(row) row.val = val;
+  }
+  setFin('loyer annuel', d.loyerAnnuel);
+  setFin('loyer mensuel', d.loyerMensuel);
+  setFin('destination', d.destination);
+  setFin('charges', d.charges);
+  setFin('taxe', d.taxe);
+  setFin('honoraires', d.honoraires);
+
+  if(d.surfaces.length){
+    const uniq = [...new Set(d.surfaces)].slice(0,3);
+    state.chiffres = uniq.map((s,i)=>({val:s, lbl: i===0?'SURFACE TOTALE':('SURFACE '+(i+1))}));
+  }
+
+  state.descriptifHTML = '<div>'+esc(d.fullText).replace(/\n{2,}/g,'</div><div><br></div><div>').replace(/\n/g,'<br>')+'</div>';
+  if(state.descriptifHTML.length > 3000) state.descriptifHTML = state.descriptifHTML.slice(0,3000);
+
+  syncFormFromState();
+  renderPreview();
+  showTab('edit');
+  alert('Fiche pré-remplie ! Vérifie et ajuste les champs dans l\'édition. Rien ne sera perdu.');
+}
+
+/* ================= PHOTOS : redimensionnement au doigt ================= */
+let phDrag = null;
+function currentScale(){
+  const scaler = document.getElementById('scaler');
+  const tr = scaler.style.transform || '';
+  const m = tr.match(/scale\(([\d.]+)\)/);
+  return m ? parseFloat(m[1]) : 1;
+}
+function phPointerDown(e){
+  const handle = e.target.closest ? e.target.closest('.ph-handle') : null;
+  const wrap = e.target.closest ? e.target.closest('.ph-wrap') : null;
+  if(handle){
+    const idx = +handle.dataset.idx;
+    const pt = e.touches ? e.touches[0] : e;
+    phDrag = {mode:'resize', idx, startY:pt.clientY, startH:(state.photoH&&state.photoH[idx])||140};
+    e.preventDefault();
+  } else if(wrap){
+    const idx = +wrap.dataset.idx;
+    const pt = e.touches ? e.touches[0] : e;
+    phDrag = {mode:'pan', idx, startY:pt.clientY, startPos:(state.photoPos&&state.photoPos[idx])||50};
+    e.preventDefault();
+  }
+}
+function phPointerMove(e){
+  if(!phDrag) return;
+  const pt = e.touches ? e.touches[0] : e;
+  const sc = currentScale() || 1;
+  const dy = (pt.clientY - phDrag.startY)/sc;
+  if(phDrag.mode==='resize'){
+    let h = phDrag.startH + dy;
+    h = Math.max(60, Math.min(340, h));
+    if(!state.photoH) state.photoH=[140,140];
+    state.photoH[phDrag.idx] = Math.round(h);
+    renderPreview();
+  } else {
+    let pos = phDrag.startPos + (dy/2);
+    pos = Math.max(0, Math.min(100, pos));
+    if(!state.photoPos) state.photoPos=[50,50];
+    state.photoPos[phDrag.idx] = Math.round(pos);
+    renderPreview();
+  }
+  e.preventDefault();
+}
+function phPointerUp(){ phDrag = null; }
+document.addEventListener('mousedown', phPointerDown);
+document.addEventListener('mousemove', phPointerMove);
+document.addEventListener('mouseup', phPointerUp);
+document.addEventListener('touchstart', phPointerDown, {passive:false});
+document.addEventListener('touchmove', phPointerMove, {passive:false});
+document.addEventListener('touchend', phPointerUp);
+
 async function generatePDF(){
   const btn = document.getElementById('btn-pdf');
   btn.disabled = true;
@@ -902,7 +1153,9 @@ async function generatePDF(){
     wrap.style.position='fixed'; wrap.style.left='0'; wrap.style.top='0'; wrap.style.zIndex='-1';
     document.getElementById('scaler').style.transform = 'none';
     document.getElementById('scaler').style.width = '794px';
-    const canvas = await html2canvas(page, {scale:4, useCORS:true, allowTaint:true, backgroundColor:'#ffffff', width:794, windowWidth:794});
+    page.classList.add('exporting');
+    const canvas = await html2canvas(page, {scale:4, useCORS:true, allowTaint:true, backgroundColor:'#ffffff', width:794, height:1123, windowWidth:794});
+    page.classList.remove('exporting');
     wrap.style.position=''; wrap.style.left=''; wrap.style.top=''; wrap.style.zIndex='';
     if(wasOffscreen) wrap.classList.add('offscreen');
     document.getElementById('scaler').style.transform = prevTransform;
@@ -914,19 +1167,7 @@ async function generatePDF(){
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({unit:'mm', format:'a4', orientation:'portrait'});
     const pageW = 210, pageH = 297;
-    const ratio = canvas.height/canvas.width;
-    let imgW = pageW;
-    let imgH = pageW*ratio;
-    // TOUJOURS une seule page A4 : si le contenu dépasse en hauteur, on le comprime
-    // pour qu'il tienne pile sur la page (jamais de 2e page)
-    if(imgH > pageH){
-      const k = pageH/imgH;
-      imgH = pageH;
-      imgW = pageW*k;
-    }
-    const offX = (pageW-imgW)/2;
-    const offY = (pageH-imgH)/2;
-    pdf.addImage(imgData,'JPEG',offX,offY,imgW,imgH,undefined,'FAST');
+    pdf.addImage(imgData,'JPEG',0,0,pageW,pageH,undefined,'FAST');
     const filename = 'Fiche_Produit_'+(state.titre||'sans_titre').replace(/[^a-zA-Z0-9]+/g,'_').slice(0,40)+'.pdf';
     pdf.save(filename);
   }catch(e){
